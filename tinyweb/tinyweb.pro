@@ -9,7 +9,7 @@ SOURCES += main.cpp \
 
 HEADERS += \
     tinyweb.h \
-    task.h \
+#    task.h \
     echo-server.h
 
 LIBS +=  -lpthread

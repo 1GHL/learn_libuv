@@ -9,3 +9,5 @@ SOURCES += main.cpp \
 HEADERS += \
     forwserver.h
 
+LIBS +=  -lpthread -levent
+
