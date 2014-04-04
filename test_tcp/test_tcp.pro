@@ -15,7 +15,8 @@ SOURCES += main.cpp \
 #    test/test-ping-pong.c
     test.cpp \
     testmam.cpp \
-    test_udp.cpp
+    test_udp.cpp \
+    test_uv_tcp.cpp
 
 LIBS +=  -lpthread -levent -lev
 LIBS += -L$$PWD/../libs/ -luv

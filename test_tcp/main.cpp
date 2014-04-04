@@ -164,7 +164,7 @@ void onConnection(uv_stream_t* stream, int status)
 }
 
 
-int main()
+int main77()
 {
 
     cout << "Hello World!" << endl;
