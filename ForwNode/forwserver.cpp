@@ -3,118 +3,173 @@
 
 using namespace Dosee::ForwNode ;
 
-ForwServer::ForwServer(int tcp_port,int udp_port)
-    :tcp_port_(tcp_port),
-      udp_port_(udp_port)
+
+void tcp_on_connection(uv_stream_t* server, int status)
 {
-
-}
-ForwServer::ForwServer()
-{
-
-}
-
-
-int ForwServer::start_tcp()
-{
-    struct event_base *base_;
-    struct evconnlistener *listener_;
-
-    if (tcp_port_<=0 || tcp_port_>65535) {
-        puts("user default");
-        tcp_port_ = 19876;
+  if (status == -1) {
+      // error!
+      return;
     }
 
-    base_ = event_base_new();
-    if (!base_) {
-        puts("Couldn't open event base");
-        return 1;
+  struct sockaddr  peername;
+  int namelen,r;
+  char req_ip[17];
+
+  uv_tcp_t *client = (uv_tcp_t *) malloc(sizeof(uv_tcp_t));
+  uv_tcp_init(server->loop, client);
+  if (uv_accept(server, (uv_stream_t *) client) == 0) {
+      uv_read_start((uv_stream_t *) client, read_buffer, tcp_on_message);
+    }
+  else {
+      uv_close((uv_handle_t *) client, NULL);
     }
 
-    struct sockaddr_in sin;
-    memset(&sin, 0, sizeof(sin));
-    /* This is an INET address */
-    sin.sin_family = AF_INET;
-    /* Listen on 0.0.0.0 */
-    sin.sin_addr.s_addr = htonl(0);
-    /* Listen on the given port. */
-    sin.sin_port = htons(tcp_port_);
+  //namelen = sizeof sockname;
+  r = uv_tcp_getsockname(( uv_tcp_t *)server, &sockname, &namelen);
 
-    struct sockaddr_in sin2;
-    memset(&sin2, 0, sizeof(sin2));
-    /* This is an INET address */
-    sin2.sin_family = AF_INET;
-    /* Listen on 0.0.0.0 */
-    sin2.sin_addr.s_addr = htonl(0);
-    /* Listen on the given port. */
-    sin2.sin_port = htons(udp_port_);
 
-    listener_ = evconnlistener_new_bind(base_, &ForwServer::onConnection, NULL,
-                                        LEV_OPT_CLOSE_ON_FREE|LEV_OPT_REUSEABLE, -1,
-                                        (struct sockaddr*)&sin, sizeof(sin));
-    if (!listener_) {
-        perror("Couldn't create listener");
-        return 1;
+   struct sockaddr_in peer_addr = *(struct sockaddr_in*) addr;
+    namelen = sizeof peer_addr;
+  r = uv_tcp_getpeername(( uv_tcp_t *)client, &peer_addr, &namelen);
+  //check_sockname(&peername, "127.0.0.1", 9999, "server socket");
+  r = uv_ip4_name(&peer_addr, (char*) req_ip, sizeof req_ip);
+
+}
+
+uv_buf_t read_buffer(uv_handle_t* handle, size_t suggested_size)
+{
+    char buff[2048]={0,};
+    return uv_buf_init(buff , 2048);
+}
+
+
+
+void tcp_on_message(uv_stream_t* stream, ssize_t nread, uv_buf_t buf)
+{
+
+    if(nread == 0)
+    {
+        return ;
     }
-
-    evconnlistener_set_error_cb(listener_, &ForwServer::onAcceptError);
-
-    event_base_dispatch(base_);
-
-}
-
-
-void ForwServer::onConnection(struct evconnlistener *listener,
-                              evutil_socket_t fd, struct sockaddr *address, int socklen,
-                              void *ctx)
-{
-    /* We got a new connection! Set up a bufferevent for it. */
-    struct event_base *base = evconnlistener_get_base(listener);
-    struct bufferevent *bev = bufferevent_socket_new(
-                base, fd, BEV_OPT_CLOSE_ON_FREE);
-
-    sockaddr_in sin;
-    ::memcpy(&sin, address, sizeof(sin));
-
-    cout<< inet_ntoa(sin.sin_addr)<<":"<<ntohs(sin.sin_port)<<endl;
-
-    bufferevent_setcb(bev, ForwServer::onMessage, NULL, ForwServer::onCloseConn, NULL);
-
-    bufferevent_enable(bev, EV_READ|EV_WRITE);
-}
-
-
-void ForwServer::onAcceptError(struct evconnlistener *listener, void *ctx)
-{
-    struct event_base *base = evconnlistener_get_base(listener);
-    //    int err = EVUTIL_SOCKET_ERROR();
-    //    fprintf(stderr, "Got an error %d (%s) on the listener. "
-    //            "Shutting down.\n", err, evutil_socket_error_to_string(err));
-
-    event_base_loopexit(base, NULL);
-}
-
-
-void ForwServer::onMessage(struct bufferevent *bev, void *ctx)
-{
-    /* This callback is invoked when there is data to read on bev. */
-    struct evbuffer *input = bufferevent_get_input(bev);
-    struct evbuffer *output = bufferevent_get_output(bev);
-    int read_length=evbuffer_get_length(input);
-    cout<<"input lenght:"<<read_length<<endl;
-    void * data=malloc(read_length);
-    evbuffer_remove(input,data,read_length);
-
-
-    /* Copy all the data from the input buffer to the output buffer. */
-    evbuffer_add_buffer(output, input);
-}
-
-void ForwServer::onCloseConn(struct bufferevent *bev, short events, void *ctx)
-{
-    if (events & BEV_EVENT_ERROR)
-        perror("Error from bufferevent");
-    if (events & (BEV_EVENT_EOF | BEV_EVENT_ERROR)) {
-        bufferevent_free(bev);
+    else if(nread >0 && nread < buf.len)
+    {
+        if(buf.base[nread-1]=='\n' && buf.base[nread-2]=='\r')
+        {
+            //  uv_read_stop(stream);
+        }
+        printf("ok...\n");
+        // uv_read_stop(stream);
+        return ;
     }
 }
+
+
+void udp_on_message(uv_udp_t* handle,
+              ssize_t nread,
+              uv_buf_t buf,
+              struct sockaddr* addr,
+              unsigned flags)
+{
+    struct sockaddr sockname;
+    int namelen;
+    char req_ip[17];
+    int r;
+
+    //ASSERT(nread >= 0);
+    //free(buf.base);
+
+    if (nread == 0) {
+        return;
+    }
+
+    memset(&sockname, -1, sizeof sockname);
+    namelen = sizeof(sockname);
+    r = uv_udp_getsockname(handle, &sockname, &namelen);
+    //ASSERT(r == 0);
+    r = uv_ip4_name(&addr, (char*) req_ip, sizeof req_ip);
+
+
+    //uv_close((uv_handle_t*) handle, NULL);
+}
+
+void start(int tcp_port,int udp_port)
+{
+  loop=uv_default_loop();
+  init_tcp(tcp_port);
+  init_udp(udp_port);
+  uv_run(loop, UV_RUN_DEFAULT);
+}
+
+void init_tcp(int tcp_port)
+{
+
+  uv_tcp_t tcp_server;
+
+  uv_tcp_init(loop,&tcp_server);
+
+  struct sockaddr_in tcp_addr = uv_ip4_addr("0.0.0.0", tcp_port);
+
+  uv_tcp_bind(&tcp_server,tcp_addr);
+
+  int ret = uv_listen((uv_stream_t *) &tcp_server,MAX_TCP_CONNECTION,tcp_on_connection);
+
+}
+
+void init_udp(int udp_port)
+{
+
+  uv_udp_t udp_server;
+  uv_udp_init(loop,&udp_server);
+
+  struct sockaddr_in udp_addr = uv_ip4_addr("0.0.0.0", udp_port);
+
+  uv_udp_bind(&udp_server,udp_addr,0);
+
+  int ret = uv_udp_recv_start(&udp_server, read_buffer, udp_on_message);
+
+  return 0;
+}
+
+
+//ForwServer::ForwServer(int tcp_port,int udp_port)
+//    :tcp_port_(tcp_port),
+//      udp_port_(udp_port)
+//{
+
+//}
+//ForwServer::ForwServer()
+//{
+
+//}
+
+
+//int ForwServer::start_tcp()
+//{
+
+
+//}
+
+
+//void ForwServer::onConnection(struct evconnlistener *listener,
+//                              evutil_socket_t fd, struct sockaddr *address, int socklen,
+//                              void *ctx)
+//{
+
+//}
+
+
+//void ForwServer::onAcceptError(struct evconnlistener *listener, void *ctx)
+//{
+
+//}
+
+
+//void ForwServer::onMessage(struct bufferevent *bev, void *ctx)
+//{
+
+//}
+
+//void ForwServer::onCloseConn(struct bufferevent *bev, short events, void *ctx)
+//{
+
+//}

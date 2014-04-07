@@ -3,7 +3,9 @@ CONFIG += console
 CONFIG -= app_bundle
 CONFIG -= qt
 
-SOURCES += main.cpp \
+SOURCES += test_uv_tcp.cpp \
+           test/test-getsockname.c \
+#main.cpp \
 #    test/test-tcp-read-stop.c \
 #    test/test-tcp-open.c \
 #    test/test-tcp-flags.c \
@@ -13,12 +15,12 @@ SOURCES += main.cpp \
 #    test/test-poll-close.c \
 #    test/test-poll.c \
 #    test/test-ping-pong.c
-    test.cpp \
-    testmam.cpp \
-    test_udp.cpp \
-    test_uv_tcp.cpp
+#    test.cpp \
+#    testmam.cpp \
+#    test_udp.cpp \
 
-LIBS +=  -lpthread -levent -lev
+
+LIBS +=  -lpthread #-levent -lev
 LIBS += -L$$PWD/../libs/ -luv
 INCLUDEPATH += $$PWD/../include
 DEPENDPATH += $$PWD/../libs

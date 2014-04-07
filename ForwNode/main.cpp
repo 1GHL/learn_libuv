@@ -8,8 +8,8 @@ using namespace Dosee::ForwNode;
 int main()
 {
     cout << "Hello World!" << endl;
-    ForwServer forw(5006,5007);
-    forw.start_tcp();
+//    ForwServer forw(5006,5007);
+//    forw.start_tcp();
     return 0;
 }
 

@@ -9,5 +9,9 @@ SOURCES += main.cpp \
 HEADERS += \
     forwserver.h
 
-LIBS +=  -lpthread -levent
-
+#LIBS +=  -lpthread -levent
+LIBS +=  -lpthread
+LIBS += -L$$PWD/../libs/ -luv
+INCLUDEPATH += $$PWD/../include
+DEPENDPATH += $$PWD/../libs
+PRE_TARGETDEPS += $$PWD/../libs/libuv.a
